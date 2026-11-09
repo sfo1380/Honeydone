@@ -9,7 +9,8 @@ Web app first (Next.js 16 + Postgres, hosted on Render); a mobile app comes late
 | Area | Status |
 | --- | --- |
 | Accounts, two-partner household, invite link, settings | Done |
-| Chores (+ reward tracker) | Next |
+| Chores | Done |
+| Reward tracker | Next |
 | Shopping | Planned |
 | Kids' activities | Planned |
 | Budget | Planned |
@@ -48,7 +49,9 @@ Free plan limits: the web service sleeps after about 15 minutes idle (the next v
 
 ## Code map
 
-- `prisma/schema.prisma`: data model (Household, User, Session, Kid)
+- `prisma/schema.prisma`: data model (Household, User, Session, Kid, Chore, ChoreTask)
+- `src/lib/repeat.ts`, `src/lib/dates.ts`: repeat rules and calendar-date helpers (pure, unit tested)
+- `src/lib/chores.ts`: creating, completing, undoing and projecting chores
 - `src/lib/`: database client, sessions, household rules, validation
 - `src/app/actions/`: server actions for sign-in and household changes
 - `src/app/(auth)`, `src/app/(app)`: signed-out and signed-in pages

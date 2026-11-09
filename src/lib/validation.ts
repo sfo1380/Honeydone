@@ -42,3 +42,50 @@ export function fieldErrors(error: z.ZodError): Record<string, string> {
   }
   return out;
 }
+
+export const choreSchema = z
+  .object({
+    title: z.string().trim().min(1, "Give the chore a name.").max(80, "Keep the name under 80 characters."),
+    notes: z
+      .string()
+      .trim()
+      .max(500, "Keep notes under 500 characters.")
+      .transform((v) => v || null),
+    category: z.string().trim().min(1).max(40),
+    effort: z.enum(["SMALL", "MEDIUM", "LARGE"], "Pick a size."),
+    owner: z.string().min(1, "Pick who does it."),
+    rotate: z.boolean(),
+    repeat: z.enum(["NONE", "DAILY", "WEEKLY", "MONTHLY"], "Pick how often."),
+    interval: z.coerce.number().int().min(1, "Use 1 or more.").max(52, "Use 52 or less."),
+    weekdays: z.array(z.coerce.number().int().min(0).max(6)),
+    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date."),
+    dueTime: z
+      .string()
+      .regex(/^(\d{2}:\d{2})?$/, "Pick a time.")
+      .transform((v) => v || null),
+  })
+  .refine((c) => c.repeat !== "WEEKLY" || c.weekdays.length > 0, {
+    path: ["weekdays"],
+    message: "Pick at least one day.",
+  })
+  .refine((c) => !c.rotate || c.owner !== "either", {
+    path: ["rotate"],
+    message: "Pick a starting partner to take turns.",
+  });
+
+/** Reads the chore form, including the repeated `weekdays` checkboxes. */
+export function choreFormValues(formData: FormData) {
+  return {
+    title: String(formData.get("title") ?? ""),
+    notes: String(formData.get("notes") ?? ""),
+    category: String(formData.get("category") ?? "Other"),
+    effort: String(formData.get("effort") ?? ""),
+    owner: String(formData.get("owner") ?? ""),
+    rotate: formData.get("rotate") === "on",
+    repeat: String(formData.get("repeat") ?? ""),
+    interval: String(formData.get("interval") ?? "1"),
+    weekdays: formData.getAll("weekdays").map(String),
+    startDate: String(formData.get("startDate") ?? ""),
+    dueTime: String(formData.get("dueTime") ?? ""),
+  };
+}
