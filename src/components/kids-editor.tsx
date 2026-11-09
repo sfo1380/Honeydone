@@ -13,7 +13,7 @@ export function KidsEditor({ kids }: { kids: { id: string; name: string }[] }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted">Used later for chores and the kids&apos; activities.</p>
+      <p className="text-sm text-muted">Used for the kids&apos; activities. Removing a kid also removes their activities.</p>
       {kids.length > 0 && (
         <ul className="divide-y divide-line rounded-lg border border-line">
           {kids.map((k) => (
