@@ -7,6 +7,8 @@ import { todayIn } from "@/lib/dates";
 import { InvitePanel } from "@/components/invite-panel";
 import { requireHousehold } from "@/lib/dal";
 import { inviteUrl } from "@/lib/invite-url";
+import { metGoal } from "@/lib/points";
+import { openAwardCount, rewardsOverview } from "@/lib/rewards";
 
 const AREAS = [
   { name: "Kids' activities", blurb: "Practices, games and who's driving.", icon: "⚽" },
@@ -19,6 +21,9 @@ export default async function DashboardPage() {
   const { open, done } = await tasksForToday(household.id, todayIn(household.timeZone));
   const toBuy = await db.shoppingItem.count({ where: { householdId: household.id, clearedAt: null, checkedAt: null } });
   const myOpen = open.filter((t) => t.assigneeId === user.id || t.assigneeId === null).length;
+  const [rewards, prizes] = partner
+    ? await Promise.all([rewardsOverview(household, household.members), openAwardCount(household.id, user.id)])
+    : [null, 0];
   const overdue = open.filter((t) => t.dueDate < new Date(`${todayIn(household.timeZone)}T00:00:00Z`)).length;
 
   return (
@@ -73,6 +78,27 @@ export default async function DashboardPage() {
             {toBuy === 0 ? "Your lists are empty." : `${toBuy} item${toBuy === 1 ? "" : "s"} to get`}
           </p>
         </Link>
+        {rewards && (
+          <Link
+            href="/rewards"
+            className="rounded-2xl border border-honey bg-surface p-5 shadow-sm transition hover:shadow-md"
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <span aria-hidden className="text-2xl">🏆</span>
+              {prizes > 0 && (
+                <span className="rounded-full bg-honey/30 px-2 py-0.5 text-xs font-semibold">
+                  {prizes} {prizes === 1 ? "coupon" : "coupons"} waiting
+                </span>
+              )}
+            </div>
+            <h2 className="font-semibold">Rewards</h2>
+            <p className="text-sm text-muted">
+              {rewards.thisWeek.rate === null
+                ? `Team goal: ${household.teamGoal}% of chores on time this week.`
+                : `${rewards.thisWeek.rate}% on time this week · goal ${household.teamGoal}%${metGoal(rewards.thisWeek, household.teamGoal) ? " ✓" : ""}`}
+            </p>
+          </Link>
+        )}
         {AREAS.map((a) => (
           <div key={a.name} className="rounded-2xl border border-line bg-surface p-5">
             <div className="mb-3 flex items-center justify-between">
