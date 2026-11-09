@@ -12,7 +12,7 @@ Web app first (Next.js 16 + Postgres, hosted on Render); a mobile app comes late
 | Chores | Done |
 | Reward tracker | Next |
 | Shopping | Done |
-| Kids' activities | Planned |
+| Kids' activities | Done |
 | Budget | Planned |
 
 ## Run it locally
@@ -53,6 +53,7 @@ Free plan limits: the web service sleeps after about 15 minutes idle (the next v
 - `src/lib/repeat.ts`, `src/lib/dates.ts`: repeat rules and calendar-date helpers (pure, unit tested)
 - `src/lib/chores.ts`: creating, completing, undoing and projecting chores
 - `src/lib/shopping.ts`, `src/lib/shopping-catalog.ts`: shopping lists, aisle guessing and frequent items
+- `src/lib/activities.ts`, `src/lib/season.ts`: kids' activities, weekly schedules laid over the season, drivers
 - `src/lib/`: database client, sessions, household rules, validation
 - `src/app/actions/`: server actions for sign-in and household changes
 - `src/app/(auth)`, `src/app/(app)`: signed-out and signed-in pages

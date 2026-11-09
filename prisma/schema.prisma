@@ -23,14 +23,16 @@ model Household {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  members User[]
-  kids    Kid[]
-  chores  Chore[]
-  tasks   ChoreTask[]
-  lists   ShoppingList[]
-  items   ShoppingItem[]
-  coupons Coupon[]
-  awards  Award[]
+  members    User[]
+  kids       Kid[]
+  chores     Chore[]
+  tasks      ChoreTask[]
+  lists      ShoppingList[]
+  items      ShoppingItem[]
+  coupons    Coupon[]
+  awards     Award[]
+  activities Activity[]
+  events     ActivityEvent[]
 }
 
 model User {
@@ -43,14 +45,16 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  household      Household?     @relation(fields: [householdId], references: [id], onDelete: SetNull)
+  household      Household?      @relation(fields: [householdId], references: [id], onDelete: SetNull)
   sessions       Session[]
-  choresOwned    Chore[]        @relation("ChoreOwner")
-  tasksAssigned  ChoreTask[]    @relation("TaskAssignee")
-  tasksCompleted ChoreTask[]    @relation("TaskCompleter")
-  itemsAdded     ShoppingItem[] @relation("ItemAdder")
-  couponsGiven   Coupon[]       @relation("CouponGiver")
-  awardsWon      Award[]        @relation("AwardWinner")
+  choresOwned    Chore[]         @relation("ChoreOwner")
+  tasksAssigned  ChoreTask[]     @relation("TaskAssignee")
+  tasksCompleted ChoreTask[]     @relation("TaskCompleter")
+  itemsAdded     ShoppingItem[]  @relation("ItemAdder")
+  couponsGiven   Coupon[]        @relation("CouponGiver")
+  awardsWon      Award[]         @relation("AwardWinner")
+  dropOffs       ActivityEvent[] @relation("DropOff")
+  pickUps        ActivityEvent[] @relation("PickUp")
 
   @@index([householdId])
 }
@@ -74,7 +78,8 @@ model Kid {
   name        String
   createdAt   DateTime @default(now())
 
-  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  household  Household  @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  activities Activity[]
 
   @@index([householdId])
 }
@@ -230,4 +235,89 @@ model Award {
 
   @@unique([householdId, weekStart, winnerId, reason])
   @@index([householdId, usedAt])
+}
+
+enum EventKind {
+  PRACTICE
+  GAME
+  OTHER
+}
+
+/// One kid's sport or program for a season, e.g. "Emma: spring soccer".
+model Activity {
+  id           String   @id @default(cuid())
+  householdId  String
+  kidId        String
+  name         String
+  team         String?
+  coachName    String?
+  coachContact String?
+  location     String?
+  seasonStart  DateTime @db.Date
+  seasonEnd    DateTime @db.Date
+  /// What to bring to every practice and game.
+  bringList    String[]
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  household Household          @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  kid       Kid                @relation(fields: [kidId], references: [id], onDelete: Cascade)
+  schedules ActivitySchedule[]
+  events    ActivityEvent[]
+
+  @@index([householdId])
+}
+
+/// A weekly slot ("Practice, Tue and Thu, 5:30 to 7 PM"). Its events are created for the whole season.
+model ActivitySchedule {
+  id               String    @id @default(cuid())
+  activityId       String
+  kind             EventKind @default(PRACTICE)
+  weekdays         Int[]
+  startTime        String
+  endTime          String?
+  location         String?
+  defaultDropOffId String?
+  defaultPickUpId  String?
+  createdAt        DateTime  @default(now())
+
+  activity Activity        @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  events   ActivityEvent[]
+
+  @@index([activityId])
+}
+
+/// One practice, game or event on one date. Drivers are set per event.
+model ActivityEvent {
+  id          String    @id @default(cuid())
+  activityId  String
+  householdId String
+  /// Set when the event came from a weekly schedule.
+  scheduleId  String?
+  /// The schedule slot this event fills, even if it was moved to another date.
+  slotDate    DateTime? @db.Date
+  /// Edited by hand (time, place, type or date), so schedule changes leave it alone.
+  customized  Boolean   @default(false)
+  kind        EventKind @default(PRACTICE)
+  title       String?
+  date        DateTime  @db.Date
+  startTime   String
+  endTime     String?
+  location    String?
+  notes       String?
+  dropOffId   String?
+  pickUpId    String?
+  cancelled   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  activity  Activity          @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  household Household         @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  schedule  ActivitySchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  dropOff   User?             @relation("DropOff", fields: [dropOffId], references: [id], onDelete: SetNull)
+  pickUp    User?             @relation("PickUp", fields: [pickUpId], references: [id], onDelete: SetNull)
+
+  @@unique([scheduleId, slotDate])
+  @@index([householdId, date])
 }

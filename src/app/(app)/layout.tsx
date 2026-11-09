@@ -31,13 +31,15 @@ async function UserMenu() {
   return (
     <div className="flex items-center gap-2 text-sm">
       <span className="hidden text-muted sm:inline">{household.name}</span>
-      <span
-        aria-label={`Signed in as ${user.displayName}`}
-        className="grid h-8 w-8 place-items-center rounded-full text-sm font-bold text-white"
+      <Link
+        href="/settings"
+        aria-label={`Settings (signed in as ${user.displayName})`}
+        title="Settings"
+        className="grid h-8 w-8 place-items-center rounded-full text-sm font-bold text-white ring-offset-2 ring-offset-surface hover:ring-2 hover:ring-honey"
         style={{ backgroundColor: user.color }}
       >
         {user.displayName.slice(0, 1).toUpperCase()}
-      </span>
+      </Link>
       <form action={signOut}>
         <button type="submit" className="rounded-lg px-2 py-1 text-muted hover:text-foreground">
           Sign out

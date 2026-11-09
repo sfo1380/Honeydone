@@ -110,3 +110,67 @@ export const itemSchema = z.object({
     .trim()
     .transform((v) => (v && v !== "auto" ? v : null)),
 });
+
+const time = z.string().regex(/^\d{2}:\d{2}$/, "Pick a time.");
+const optionalTime = z
+  .string()
+  .regex(/^(\d{2}:\d{2})?$/, "Pick a time.")
+  .transform((v) => v || null);
+const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date.");
+const personOrNone = z.string().transform((v) => (v && v !== "none" ? v : null));
+const eventKind = z.enum(["PRACTICE", "GAME", "OTHER"], "Pick a type.");
+
+export const activitySchema = z
+  .object({
+    kidId: z.string().min(1, "Pick a kid."),
+    name: z.string().trim().min(1, "Name the activity.").max(60, "Keep the name under 60 characters."),
+    team: optionalText(60, "the team"),
+    coachName: optionalText(60, "the coach's name"),
+    coachContact: optionalText(80, "the contact"),
+    location: optionalText(120, "the location"),
+    seasonStart: day,
+    seasonEnd: day,
+    bringList: z
+      .string()
+      .max(1000)
+      .transform((v) =>
+        v
+          .split("\n")
+          .map((l) => l.trim())
+          .filter(Boolean)
+          .slice(0, 20),
+      ),
+    notes: optionalText(500, "notes"),
+  })
+  .refine((a) => a.seasonEnd >= a.seasonStart, { path: ["seasonEnd"], message: "The season has to end after it starts." })
+  .refine(
+    (a) => (new Date(a.seasonEnd).getTime() - new Date(a.seasonStart).getTime()) / 86_400_000 <= 366,
+    { path: ["seasonEnd"], message: "Keep a season to a year or less." },
+  );
+
+export const scheduleSchema = z
+  .object({
+    kind: eventKind,
+    weekdays: z.array(z.coerce.number().int().min(0).max(6)).min(1, "Pick at least one day."),
+    startTime: time,
+    endTime: optionalTime,
+    location: optionalText(120, "the location"),
+    defaultDropOffId: personOrNone,
+    defaultPickUpId: personOrNone,
+  })
+  .refine((s) => !s.endTime || s.endTime > s.startTime, { path: ["endTime"], message: "End after it starts." });
+
+export const eventSchema = z
+  .object({
+    kind: eventKind,
+    title: optionalText(60, "the title"),
+    date: day,
+    startTime: time,
+    endTime: optionalTime,
+    location: optionalText(120, "the location"),
+    notes: optionalText(300, "notes"),
+    dropOffId: personOrNone,
+    pickUpId: personOrNone,
+    cancelled: z.boolean(),
+  })
+  .refine((s) => !s.endTime || s.endTime > s.startTime, { path: ["endTime"], message: "End after it starts." });

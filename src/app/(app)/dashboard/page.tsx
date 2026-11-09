@@ -3,7 +3,8 @@ import { AutoRefresh } from "@/components/auto-refresh";
 import { Card } from "@/components/card";
 import { tasksForToday } from "@/lib/chores";
 import { db } from "@/lib/db";
-import { todayIn } from "@/lib/dates";
+import { addDays, friendlyDate, friendlyTime, todayIn, toDateStr } from "@/lib/dates";
+import { eventsBetween, needsDriver } from "@/lib/activities";
 import { InvitePanel } from "@/components/invite-panel";
 import { requireHousehold } from "@/lib/dal";
 import { inviteUrl } from "@/lib/invite-url";
@@ -11,7 +12,6 @@ import { metGoal } from "@/lib/points";
 import { openAwardCount, rewardsOverview } from "@/lib/rewards";
 
 const AREAS = [
-  { name: "Kids' activities", blurb: "Practices, games and who's driving.", icon: "⚽" },
   { name: "Budget", blurb: "Your monthly plan and spending.", icon: "💵" },
 ] as const;
 
@@ -24,6 +24,10 @@ export default async function DashboardPage() {
   const [rewards, prizes] = partner
     ? await Promise.all([rewardsOverview(household, household.members), openAwardCount(household.id, user.id)])
     : [null, 0];
+  const today = todayIn(household.timeZone);
+  const week = (await eventsBetween(household.id, today, addDays(today, 6))).filter((e) => !e.cancelled);
+  const nextEvent = week[0];
+  const noDriver = week.filter(needsDriver).length;
   const overdue = open.filter((t) => t.dueDate < new Date(`${todayIn(household.timeZone)}T00:00:00Z`)).length;
 
   return (
@@ -99,6 +103,22 @@ export default async function DashboardPage() {
             </p>
           </Link>
         )}
+        <Link href="/activities" className="rounded-2xl border border-honey bg-surface p-5 shadow-sm transition hover:shadow-md">
+          <div className="mb-3 flex items-center justify-between">
+            <span aria-hidden className="text-2xl">⚽</span>
+            {noDriver > 0 && (
+              <span className="rounded-full bg-danger/15 px-2 py-0.5 text-xs font-semibold text-danger">
+                {noDriver} need{noDriver === 1 ? "s" : ""} a driver
+              </span>
+            )}
+          </div>
+          <h2 className="font-semibold">Kids&apos; activities</h2>
+          <p className="text-sm text-muted">
+            {nextEvent
+              ? `Next: ${nextEvent.activity.kid.name}, ${nextEvent.title ?? nextEvent.activity.name}, ${friendlyDate(toDateStr(nextEvent.date), today).toLowerCase()} at ${friendlyTime(nextEvent.startTime)}`
+              : "Nothing this week. Tap to add practices and games."}
+          </p>
+        </Link>
         {AREAS.map((a) => (
           <div key={a.name} className="rounded-2xl border border-line bg-surface p-5">
             <div className="mb-3 flex items-center justify-between">
