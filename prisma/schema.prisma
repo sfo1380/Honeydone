@@ -14,6 +14,12 @@ model Household {
   timeZone    String   @default("America/New_York")
   /// Code in the partner invite link. Cleared once the household is full.
   inviteCode  String?  @unique
+  /// Head-to-head weekly crown. Off by default: every couple starts in co-op mode.
+  competition      Boolean   @default(false)
+  /// Household-local date competition was last switched on. Crowns only count weeks starting on or after it.
+  competitionSince DateTime? @db.Date
+  /// Weekly team goal: percent of due chores done on time.
+  teamGoal         Int       @default(80)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -21,6 +27,8 @@ model Household {
   kids    Kid[]
   chores  Chore[]
   tasks   ChoreTask[]
+  coupons Coupon[]
+  awards  Award[]
 }
 
 model User {
@@ -38,6 +46,8 @@ model User {
   choresOwned    Chore[]     @relation("ChoreOwner")
   tasksAssigned  ChoreTask[] @relation("TaskAssignee")
   tasksCompleted ChoreTask[] @relation("TaskCompleter")
+  couponsGiven   Coupon[]    @relation("CouponGiver")
+  awardsWon      Award[]     @relation("AwardWinner")
 
   @@index([householdId])
 }
@@ -134,4 +144,51 @@ model ChoreTask {
 
   @@unique([choreId, dueDate])
   @@index([householdId, completedAt, dueDate])
+}
+
+/// A coupon one partner offers the other, e.g. "I handle bedtime solo". Rewards are coupons only.
+model Coupon {
+  id          String   @id @default(cuid())
+  householdId String
+  /// The partner who will do it when the coupon is used.
+  giverId     String
+  title       String
+  archived    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  giver     User      @relation("CouponGiver", fields: [giverId], references: [id], onDelete: Cascade)
+  awards    Award[]
+
+  @@index([householdId, giverId])
+}
+
+enum AwardReason {
+  /// The couple hit the weekly team goal; each partner gets one.
+  TEAM_GOAL
+  /// Most points that week, when head-to-head is on. A tie crowns both.
+  CROWN
+}
+
+/// A coupon a partner won for a finished week. They pick which coupon from their partner's book.
+model Award {
+  id          String      @id @default(cuid())
+  householdId String
+  winnerId    String
+  /// The Sunday starting the week it was won for.
+  weekStart   DateTime    @db.Date
+  reason      AwardReason
+  couponId    String?
+  /// Copied when picked, so editing the coupon book later doesn't change a won coupon.
+  couponTitle String?
+  chosenAt    DateTime?
+  usedAt      DateTime?
+  createdAt   DateTime    @default(now())
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  winner    User      @relation("AwardWinner", fields: [winnerId], references: [id], onDelete: Cascade)
+  coupon    Coupon?   @relation(fields: [couponId], references: [id], onDelete: SetNull)
+
+  @@unique([householdId, weekStart, winnerId, reason])
+  @@index([householdId, usedAt])
 }
