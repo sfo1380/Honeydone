@@ -32,6 +32,8 @@ describe.skipIf(!url)("chores", async () => {
   });
 
   beforeEach(async () => {
+    await db.shoppingItem.deleteMany();
+    await db.shoppingList.deleteMany();
     await db.choreTask.deleteMany();
     await db.chore.deleteMany();
     await db.session.deleteMany();
