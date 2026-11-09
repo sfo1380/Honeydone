@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// A Honeydone household: always exactly two partners once both have joined.
+model Household {
+  id          String   @id @default(cuid())
+  name        String
+  timeZone    String   @default("America/New_York")
+  /// Code in the partner invite link. Cleared once the household is full.
+  inviteCode  String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members User[]
+  kids    Kid[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  displayName  String
+  color        String   @default("#e11d48")
+  householdId  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  household Household? @relation(fields: [householdId], references: [id], onDelete: SetNull)
+  sessions  Session[]
+
+  @@index([householdId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  /// SHA-256 of the cookie token; the raw token is never stored.
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Kid {
+  id          String   @id @default(cuid())
+  householdId String
+  name        String
+  createdAt   DateTime @default(now())
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@index([householdId])
+}
