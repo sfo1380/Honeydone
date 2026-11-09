@@ -34,7 +34,7 @@ export async function updateProfileAction(_prev: FormState, formData: FormData):
   if (!parsed.success) return { errors: fieldErrors(parsed.error) };
   await db.user.update({ where: { id: user.id }, data: parsed.data });
   revalidatePath("/", "layout");
-  return { message: "Profile saved." };
+  return { message: "Profile saved.", values: parsed.data };
 }
 
 export async function updateHouseholdAction(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -43,7 +43,7 @@ export async function updateHouseholdAction(_prev: FormState, formData: FormData
   if (!parsed.success) return { errors: fieldErrors(parsed.error) };
   await db.household.update({ where: { id: household.id }, data: parsed.data });
   revalidatePath("/", "layout");
-  return { message: "Household saved." };
+  return { message: "Household saved.", values: parsed.data };
 }
 
 export async function addKidAction(_prev: FormState, formData: FormData): Promise<FormState> {

@@ -23,6 +23,8 @@ describe.skipIf(!url)("two-partner households", async () => {
   });
 
   beforeEach(async () => {
+    await db.choreTask.deleteMany();
+    await db.chore.deleteMany();
     await db.session.deleteMany();
     await db.kid.deleteMany();
     await db.user.deleteMany();

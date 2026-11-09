@@ -19,6 +19,8 @@ model Household {
 
   members User[]
   kids    Kid[]
+  chores  Chore[]
+  tasks   ChoreTask[]
 }
 
 model User {
@@ -31,8 +33,11 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  household Household? @relation(fields: [householdId], references: [id], onDelete: SetNull)
-  sessions  Session[]
+  household      Household?  @relation(fields: [householdId], references: [id], onDelete: SetNull)
+  sessions       Session[]
+  choresOwned    Chore[]     @relation("ChoreOwner")
+  tasksAssigned  ChoreTask[] @relation("TaskAssignee")
+  tasksCompleted ChoreTask[] @relation("TaskCompleter")
 
   @@index([householdId])
 }
@@ -59,4 +64,74 @@ model Kid {
   household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
   @@index([householdId])
+}
+
+enum Effort {
+  SMALL
+  MEDIUM
+  LARGE
+}
+
+enum Repeat {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+/// A chore and its repeat rule. Each due date is a ChoreTask.
+model Chore {
+  id          String   @id @default(cuid())
+  householdId String
+  title       String
+  notes       String?
+  category    String   @default("Other")
+  effort      Effort   @default(MEDIUM)
+  /// Who usually does it. Null means either partner.
+  ownerId     String?
+  /// Alternate the owner between partners each time it repeats.
+  rotate      Boolean  @default(false)
+  repeat      Repeat   @default(NONE)
+  /// Every N days, weeks or months.
+  interval    Int      @default(1)
+  /// Days of the week for WEEKLY (0 = Sunday ... 6 = Saturday).
+  weekdays    Int[]
+  /// First due date; anchors weekly and monthly repeats.
+  startDate   DateTime @db.Date
+  /// Optional time of day, "HH:MM".
+  dueTime     String?
+  archived    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  household Household   @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  owner     User?       @relation("ChoreOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  tasks     ChoreTask[]
+
+  @@index([householdId, archived])
+}
+
+/// One due date of a chore. Completing it creates the next one for repeating chores.
+model ChoreTask {
+  id            String    @id @default(cuid())
+  choreId       String
+  householdId   String
+  dueDate       DateTime  @db.Date
+  /// Null means either partner.
+  assigneeId    String?
+  completedAt   DateTime?
+  /// The household-local date it was completed on.
+  completedOn   DateTime? @db.Date
+  completedById String?
+  /// Done on or before its due date (household time zone). Feeds the reward tracker.
+  onTime        Boolean?
+  createdAt     DateTime  @default(now())
+
+  chore       Chore     @relation(fields: [choreId], references: [id], onDelete: Cascade)
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  assignee    User?     @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  completedBy User?     @relation("TaskCompleter", fields: [completedById], references: [id], onDelete: SetNull)
+
+  @@unique([choreId, dueDate])
+  @@index([householdId, completedAt, dueDate])
 }

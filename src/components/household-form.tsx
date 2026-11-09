@@ -17,7 +17,7 @@ export function HouseholdForm({
   const [state, action] = useActionState(mode === "create" ? createHouseholdAction : updateHouseholdAction, undefined);
   const guessedZone =
     typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : undefined;
-  const zone = defaults?.timeZone ?? (TIME_ZONES.includes(guessedZone as never) ? guessedZone : "America/New_York");
+  const zone = state?.values?.timeZone ?? defaults?.timeZone ?? (TIME_ZONES.includes(guessedZone as never) ? guessedZone : "America/New_York");
 
   return (
     <form action={action} className="space-y-4">

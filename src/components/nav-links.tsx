@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const links = [
   { href: "/dashboard", label: "Home" },
+  { href: "/chores", label: "Chores" },
   { href: "/settings", label: "Settings" },
 ] as const;
 
@@ -13,7 +14,7 @@ export function NavLinks() {
   return (
     <nav className="mx-auto flex w-full max-w-3xl gap-1 px-4">
       {links.map((l) => {
-        const active = pathname === l.href;
+        const active = pathname === l.href || pathname.startsWith(`${l.href}/`);
         return (
           <Link
             key={l.href}
