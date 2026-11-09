@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { Card } from "@/components/card";
 import { tasksForToday } from "@/lib/chores";
+import { db } from "@/lib/db";
 import { todayIn } from "@/lib/dates";
 import { InvitePanel } from "@/components/invite-panel";
 import { requireHousehold } from "@/lib/dal";
@@ -10,7 +11,6 @@ import { metGoal } from "@/lib/points";
 import { openAwardCount, rewardsOverview } from "@/lib/rewards";
 
 const AREAS = [
-  { name: "Shopping", blurb: "Shared lists that update as you shop.", icon: "🛒" },
   { name: "Kids' activities", blurb: "Practices, games and who's driving.", icon: "⚽" },
   { name: "Budget", blurb: "Your monthly plan and spending.", icon: "💵" },
 ] as const;
@@ -19,6 +19,7 @@ export default async function DashboardPage() {
   const { user, household, partner } = await requireHousehold();
   const url = household.inviteCode ? await inviteUrl(household.inviteCode) : null;
   const { open, done } = await tasksForToday(household.id, todayIn(household.timeZone));
+  const toBuy = await db.shoppingItem.count({ where: { householdId: household.id, clearedAt: null, checkedAt: null } });
   const myOpen = open.filter((t) => t.assigneeId === user.id || t.assigneeId === null).length;
   const [rewards, prizes] = partner
     ? await Promise.all([rewardsOverview(household, household.members), openAwardCount(household.id, user.id)])
@@ -68,10 +69,19 @@ export default async function DashboardPage() {
                 : `${myOpen} left for you today · ${done.length} done between you`}
           </p>
         </Link>
+        <Link href="/shopping" className="rounded-2xl border border-honey bg-surface p-5 shadow-sm transition hover:shadow-md">
+          <div className="mb-3">
+            <span aria-hidden className="text-2xl">🛒</span>
+          </div>
+          <h2 className="font-semibold">Shopping</h2>
+          <p className="text-sm text-muted">
+            {toBuy === 0 ? "Your lists are empty." : `${toBuy} item${toBuy === 1 ? "" : "s"} to get`}
+          </p>
+        </Link>
         {rewards && (
           <Link
             href="/rewards"
-            className="rounded-2xl border border-honey bg-surface p-5 shadow-sm transition hover:shadow-md sm:col-span-2"
+            className="rounded-2xl border border-honey bg-surface p-5 shadow-sm transition hover:shadow-md"
           >
             <div className="mb-3 flex items-center justify-between">
               <span aria-hidden className="text-2xl">🏆</span>

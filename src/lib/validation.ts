@@ -89,3 +89,24 @@ export function choreFormValues(formData: FormData) {
     dueTime: String(formData.get("dueTime") ?? ""),
   };
 }
+
+const optionalText = (max: number, label: string) =>
+  z
+    .string()
+    .trim()
+    .max(max, `Keep ${label} under ${max} characters.`)
+    .transform((v) => v || null);
+
+export const listNameSchema = z.object({
+  name: z.string().trim().min(1, "Give the list a name.").max(40, "Keep the name under 40 characters."),
+});
+
+export const itemSchema = z.object({
+  name: z.string().trim().min(1, "Type an item.").max(80, "Keep the item under 80 characters."),
+  quantity: optionalText(20, "the amount"),
+  note: optionalText(120, "the note"),
+  category: z
+    .string()
+    .trim()
+    .transform((v) => (v && v !== "auto" ? v : null)),
+});

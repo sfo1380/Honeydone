@@ -9,24 +9,26 @@ datasource db {
 
 /// A Honeydone household: always exactly two partners once both have joined.
 model Household {
-  id          String   @id @default(cuid())
-  name        String
-  timeZone    String   @default("America/New_York")
+  id               String    @id @default(cuid())
+  name             String
+  timeZone         String    @default("America/New_York")
   /// Code in the partner invite link. Cleared once the household is full.
-  inviteCode  String?  @unique
+  inviteCode       String?   @unique
   /// Head-to-head weekly crown. Off by default: every couple starts in co-op mode.
   competition      Boolean   @default(false)
   /// Household-local date competition was last switched on. Crowns only count weeks starting on or after it.
   competitionSince DateTime? @db.Date
   /// Weekly team goal: percent of due chores done on time.
   teamGoal         Int       @default(80)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   members User[]
   kids    Kid[]
   chores  Chore[]
   tasks   ChoreTask[]
+  lists   ShoppingList[]
+  items   ShoppingItem[]
   coupons Coupon[]
   awards  Award[]
 }
@@ -41,13 +43,14 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  household      Household?  @relation(fields: [householdId], references: [id], onDelete: SetNull)
+  household      Household?     @relation(fields: [householdId], references: [id], onDelete: SetNull)
   sessions       Session[]
-  choresOwned    Chore[]     @relation("ChoreOwner")
-  tasksAssigned  ChoreTask[] @relation("TaskAssignee")
-  tasksCompleted ChoreTask[] @relation("TaskCompleter")
-  couponsGiven   Coupon[]    @relation("CouponGiver")
-  awardsWon      Award[]     @relation("AwardWinner")
+  choresOwned    Chore[]        @relation("ChoreOwner")
+  tasksAssigned  ChoreTask[]    @relation("TaskAssignee")
+  tasksCompleted ChoreTask[]    @relation("TaskCompleter")
+  itemsAdded     ShoppingItem[] @relation("ItemAdder")
+  couponsGiven   Coupon[]       @relation("CouponGiver")
+  awardsWon      Award[]        @relation("AwardWinner")
 
   @@index([householdId])
 }
@@ -144,6 +147,42 @@ model ChoreTask {
 
   @@unique([choreId, dueDate])
   @@index([householdId, completedAt, dueDate])
+}
+
+model ShoppingList {
+  id          String   @id @default(cuid())
+  householdId String
+  name        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  household Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  items     ShoppingItem[]
+
+  @@index([householdId])
+}
+
+/// An item on a list. "Clear checked" sets clearedAt instead of deleting, so past items can be suggested again.
+model ShoppingItem {
+  id          String    @id @default(cuid())
+  listId      String
+  householdId String
+  name        String
+  quantity    String?
+  note        String?
+  category    String    @default("Other")
+  checkedAt   DateTime?
+  clearedAt   DateTime?
+  addedById   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  list      ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  household Household    @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  addedBy   User?        @relation("ItemAdder", fields: [addedById], references: [id], onDelete: SetNull)
+
+  @@index([listId, clearedAt])
+  @@index([householdId, name])
 }
 
 /// A coupon one partner offers the other, e.g. "I handle bedtime solo". Rewards are coupons only.
